@@ -3,6 +3,8 @@ import os
 import curses
 from random import randint
 from time import sleep
+import pygame
+from pygame.locals import *
 
 
 class Position:
@@ -224,9 +226,37 @@ class Surface:
         curses.echo()
         curses.endwin()
 
+class Screen:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((640, 640))
+        self.running = True
+        self.entities = {}
+
+    def add_entity(self, name, entity):
+        self.entities[name] = entity
+
+    def run(self):
+        while not ir.quit:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    ir.quit = True
 
 
-def run():
+def run_graphical():
+    screen = Screen()
+    board = Board()
+    snake = Snake(board)
+    ir = Inreader()
+    food = Food(board)
+    ir.set_movement('right')
+    screen.add_entity('board', board)
+    screen.add_entity('snake', snake)
+    screen.add_entity('inreader', ir)
+    screen.add_entity('food', food)
+    screen.run()
+
+def run_console():
     surface = Surface()
     board = Board()
     snake = Snake(board)
@@ -246,7 +276,7 @@ def run():
 def main():
     while True:
         try:
-            run()
+            run_graphical()
         except Exception as e:
             print(e)
 
