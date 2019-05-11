@@ -15,6 +15,9 @@ class Position:
     def reset(self):
         self.x = self.y = 0
 
+    def get(self):
+        return (self.x,self.y,)
+
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
 
@@ -226,22 +229,75 @@ class Surface:
         curses.echo()
         curses.endwin()
 
+class Image:
+    def __init__(self, image_file):
+        self.image = pygame.image.load(image_file)
+        self.position = Position(50,50)
+
+    def set_position(self, pos):
+        self.position = pos
+
+    def gupdate(self, screen):
+        pass
+
+    def render(self, screen):
+        screen.blit(self.image, self.position.get())
+
+class Subimage:
+    def __init__(self, image_obj, rect):
+        self.image = image_obj.image.subsurface(rect)
+        self.position = Position(50, 50)
+        self.visible = False
+
+    def set_position(self, pos):
+        self.position = pos
+
+    def gupdate(self, screen):
+        pass
+
+    def render(self, screen):
+        if self.visible:
+            screen.blit(self.image, self.position.get())
+
+
+
+
 class Screen:
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((640, 640))
         self.running = True
         self.entities = {}
+        self.quit = False
 
     def add_entity(self, name, entity):
         self.entities[name] = entity
 
     def run(self):
-        while not ir.quit:
+        while not self.quit:
+            # Check input
             for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        pass
+                    elif event.key == pygame.K_ESCAPE:
+                        pass
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_SPACE:
+                        pass
+                    elif event.key == pygame.K_ESCAPE:
+                        print('Released')
+                        self.quit = True
                 if event.type == pygame.QUIT:
-                    ir.quit = True
-
+                    self.quit = True
+            for k in self.entities.keys():
+                # Update
+                if hasattr(self.entities[k], 'gupdate'):
+                    self.entities[k].gupdate(self)
+                # Render
+                if hasattr(self.entities[k], 'render'):
+                    self.entities[k].render(self.screen)
+                pygame.display.flip()
 
 def run_graphical():
     screen = Screen()
@@ -250,10 +306,76 @@ def run_graphical():
     ir = Inreader()
     food = Food(board)
     ir.set_movement('right')
-    screen.add_entity('board', board)
-    screen.add_entity('snake', snake)
     screen.add_entity('inreader', ir)
-    screen.add_entity('food', food)
+    image = Image('snake-graphics.png')
+    image.set_position(Position(50, 50))
+    sprite_size = Position(64, 64).get()
+
+    ### HEAD
+    # Up
+    head_up = Subimage(image, pygame.Rect(
+        ((3*64, 0*64), sprite_size))
+    )
+    head_up.set_position(Position(50, 50))
+    # Right
+    head_right = Subimage(image, pygame.Rect(
+        ((4*64, 0*64), sprite_size))
+    )
+    head_right.set_position(Position(50, 50))
+    # Left
+    head_left = Subimage(image, pygame.Rect(
+        ((3*64, 1*64), sprite_size))
+    )
+    head_left.set_position(Position(50, 50))
+    # Down
+    head_down = Subimage(image, pygame.Rect(
+        ((4*64, 1*64), sprite_size))
+    )
+    head_down.set_position(Position(50, 50))
+
+    ### BODY
+    # Down to right
+    body_dr = Subimage(image, pygame.Rect(
+        ((0*64, 0*64), sprite_size))
+    )
+    body_dr.set_position(Position(50, 50))
+    # Right 
+    body_r = Subimage(image, pygame.Rect(
+        ((1*64, 0*64), sprite_size))
+    )
+    body_r.set_position(Position(50, 50))
+    # Left to down
+    body_ld = Subimage(image, pygame.Rect(
+        ((2*64, 0*64), sprite_size))
+    )
+    body_ld.set_position(Position(50, 50))
+    # Up to right
+    body_ur = Subimage(image, pygame.Rect(
+        ((0*64, 1*64), sprite_size))
+    )
+    body_ur.set_position(Position(50, 50))
+    # Down
+    body_down = Subimage(image, pygame.Rect(
+        ((2*64, 1*64), sprite_size))
+    )
+    body_down.set_position(Position(50, 50))
+
+    # Up to left
+    body_ul = Subimage(image, pygame.Rect(
+        ((2*64, 2*64), sprite_size))
+    )
+    body_ul.set_position(Position(50, 50))
+
+
+    # Apple
+    apple = Subimage(image, pygame.Rect(
+        ((0*64, 3*64), sprite_size))
+    )
+    apple.set_position(Position(150, 150))
+    apple.visible = True
+
+
+    screen.add_entity('apple', apple)
     screen.run()
 
 def run_console():
@@ -277,6 +399,7 @@ def main():
     while True:
         try:
             run_graphical()
+            sys.exit(0)
         except Exception as e:
             print(e)
 
