@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import curses
 from random import randint
 from time import sleep
@@ -97,6 +98,19 @@ class Direction:
     left = 4
     up = 3
 
+class Background:
+    def __init__(self, image):
+        img = image.image
+        self.image = pygame.Surface.convert_alpha(img)
+        self.image.set_alpha(210)
+        self.pos = Position(0,0)
+        self.visible = True
+
+    def render(self, screen):
+        if self.visible:
+            screen.blit(self.image, self.pos.get())
+
+
 class Snake:
 
     SPEED = 1
@@ -105,6 +119,12 @@ class Snake:
         self.velocity = Position(self.SPEED, 0)
         self.up_bound = screen.size
         self.low_bound = Position(0, 0)
+        self.reset()
+        self.food_up = False
+        self.load_sprites(spritesheet)
+
+    def reset(self):
+        self.direction = Direction.right
         self.tail = [
             Config.START_POS,
             Position(
@@ -117,25 +137,8 @@ class Snake:
             Position(Config.START_POS.x - Config.TILE_SIZE * 3,
                  Config.START_POS.y
             ),
-            Position(Config.START_POS.x - Config.TILE_SIZE * 4,
-                 Config.START_POS.y
-            ),
-            Position(Config.START_POS.x - Config.TILE_SIZE * 5,
-                 Config.START_POS.y
-            ),
-            Position(Config.START_POS.x - Config.TILE_SIZE * 6,
-                 Config.START_POS.y
-            ),
-            Position(Config.START_POS.x - Config.TILE_SIZE * 7,
-                 Config.START_POS.y
-            ),
-            Position(Config.START_POS.x - Config.TILE_SIZE * 8,
-                 Config.START_POS.y
-            ),
         ]
-        self.food_up = False
-        self.load_sprites(spritesheet)
-        self.direction = Direction.right
+        self.move(self.direction)
 
     def load_sprites(self, spritesheet):
         sprite_size = Position(64, 64).get()
@@ -313,18 +316,21 @@ class Snake:
                 return Position(pos.x, pos.y + self.velocity.y * Config.TILE_SIZE)
         return pos
 
+    def grow(self, pos):
+        self.tail.insert(0, pos)
+        self.food_up = False
+
     def update(self, screen):
         ## Update tails
         next_pos = self.update_movement(self.tail[0])
         if self.food_up or screen.entities['food'].visible and next_pos == screen.entities['food'].pos:
             screen.entities['food'].refresh()
-            self.tail.insert(0, next_pos)
-            self.food_up = False
+            self.grow(next_pos)
         else:
             for cnt in range(len(self.tail)-1, -1, -1):
                 if not cnt:
                     if next_pos in self.tail:
-                        screen.quit = True
+                        screen.game_over = True
                     self.tail[cnt] = next_pos
                 else:
                     self.tail[cnt] = self.tail[cnt-1]
@@ -403,8 +409,8 @@ class InputProcessor:
                 if event.key == pygame.K_SPACE:
                     pass
                 elif event.key == pygame.K_ESCAPE:
-                    print('Released')
                     screen.quit = True
+                    screen.game_over = True
             if event.type == pygame.QUIT:
                 screen.quit = True
 
@@ -417,6 +423,7 @@ class Screen:
         self.running = True
         self.entities = {}
         self.quit = False
+        self.game_over = False
 
     def add_entity(self, name, entity):
         self.entities[name] = entity
@@ -425,32 +432,43 @@ class Screen:
         self.processor = processor
 
     def run(self):
-        clock = pygame.time.Clock()
         while not self.quit:
-            # Check input
-            self.processor.process_input(self)
-            for k in self.entities.keys():
-                # Update
-                if hasattr(self.entities[k], 'update'):
-                    self.entities[k].update(self)
-                # Render
-                if hasattr(self.entities[k], 'render'):
-                    self.entities[k].render(self.screen)
-            pygame.display.flip()
-            self.screen.fill((0, 0, 0))
-            dt = clock.tick(Config.FPS)
-
+            clock = pygame.time.Clock()
+            while not self.game_over:
+                # Check input
+                self.processor.process_input(self)
+                for k in self.entities.keys():
+                    # Update
+                    if hasattr(self.entities[k], 'update'):
+                        self.entities[k].update(self)
+                    # Render
+                    if hasattr(self.entities[k], 'render'):
+                        self.entities[k].render(self.screen)
+                pygame.display.flip()
+                self.screen.fill((0, 0, 0))
+                dt = clock.tick(Config.FPS)
+            time.sleep(1)
+            self.game_over = False
+            self.entities['snake'].reset()
 
 def run_graphical():
     screen = Screen(Position(640,640))
     spritesheet = Image('snake-graphics.png')
+    bg = Background(Image('bg.jpg'))
     ip = InputProcessor()
 
     food = Food(screen, spritesheet)
+    food2 = Food(screen, spritesheet)
+    food3 = Food(screen, spritesheet)
+    food4 = Food(screen, spritesheet)
     snake = Snake(screen, spritesheet)
 
     screen.add_handler(ip)
+    screen.add_entity('bg', bg)
     screen.add_entity('food', food)
+    # screen.add_entity('food2', food2)
+    # screen.add_entity('food3', food3)
+    # screen.add_entity('food4', food4)
     screen.add_entity('snake', snake)
     screen.run()
 
