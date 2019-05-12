@@ -55,10 +55,15 @@ class Food:
             self.refresh()
         screen.blit(self.image, self.position.get())
 
+class Direction:
+    right = 1
+    down = 2
+    left = 4
+    up = 3
 
 class Snake:
 
-    SPEED = 8
+    SPEED = 5
 
     def __init__(self, screen, spritesheet):
         self.velocity = Position(self.SPEED, 0)
@@ -67,6 +72,7 @@ class Snake:
         self.tail = [Position(2,2)]
         self.food_up = False
         self.load_sprites(spritesheet)
+        self.direction = Direction.right
 
     def load_sprites(self, spritesheet):
         block_size = Position(64, 64).get()
@@ -144,16 +150,29 @@ class Snake:
         self.velocity.reset()
         if direction == 1:
             self.velocity.x = self.SPEED
+            self.direction = Direction.right
         elif direction == 4:
             self.velocity.x = self.SPEED * -1
+            self.direction = Direction.left
         elif direction == 3:
             self.velocity.y = self.SPEED * -1
+            self.direction = Direction.up
         elif direction == 2:
             self.velocity.y = self.SPEED
+            self.direction = Direction.down
         if direction == 5:
             self.food_up = True
             reader.food_up = False
 
+    def get_head_image(self):
+        if self.direction == 1:
+            return self.image['head_right'].image
+        if self.direction == 2:
+            return self.image['head_down'].image
+        if self.direction == 3:
+            return self.image['head_up'].image
+        if self.direction == 4:
+            return self.image['head_left'].image
 
     def update_movement(self, pos):
         if self.velocity.x > 0:
@@ -193,7 +212,7 @@ class Snake:
     def render(self, screen):
         for each in self.tail:
             screen.blit(
-                self.image['head_right'].image,
+                self.get_head_image(),
                 each.get()
             )
 
@@ -274,7 +293,8 @@ class Screen:
                 # Render
                 if hasattr(self.entities[k], 'render'):
                     self.entities[k].render(self.screen)
-                pygame.display.flip()
+            pygame.display.flip()
+            self.screen.fill((0, 0, 0))
 
 
 def run_graphical():
