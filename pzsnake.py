@@ -18,11 +18,47 @@ class Position:
     def get(self):
         return (self.x,self.y,)
 
+    def same_x(self, other):
+        if self.x == other.x:
+            return True
+        return False
+
+    def same_y(self, other):
+        if self.y == other.y:
+            return True
+        return False
+
+    def bottom_of(self, other):
+        if self.y > other.y:
+            return True
+        return False
+
+    def top_of(self, other):
+        if self.y < other.y:
+            return True
+        return False
+
+    def left_of(self, other):
+        if self.x < other.x:
+            return True
+        return False
+
+    def right_of(self, other):
+        if self.x > other.x:
+            return True
+        return False
+
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
 
     def __str__(self):
         return f'({self.x},{self.y})'
+
+class Config:
+    SCALE = (32, 32)
+    TILE_SIZE = 32
+    FPS = 6
+    START_POS = Position(3 * TILE_SIZE, 8 * TILE_SIZE)
 
 class Food:
 
@@ -31,7 +67,7 @@ class Food:
     )
 
     def __init__(self, screen, spritesheet):
-        self.screen_size = screen.size
+        self.screen_size = screen.map_size
         self.visible = False
         self.load_sprites(spritesheet)
         self.position = Position(50, 50)
@@ -41,8 +77,8 @@ class Food:
 
     def refresh(self):
         self.pos = Position(
-            randint(1, self.screen_size.x - 2),
-            randint(1, self.screen_size.y - 2),
+            randint(1, self.screen_size.x - 2) * Config.TILE_SIZE,
+            randint(1, self.screen_size.y - 2) * Config.TILE_SIZE,
         )
         self.visible = True
 
@@ -53,7 +89,7 @@ class Food:
     def render(self, screen):
         if not self.visible:
             self.refresh()
-        screen.blit(self.image, self.position.get())
+        screen.blit(self.image, self.pos.get())
 
 class Direction:
     right = 1
@@ -63,86 +99,127 @@ class Direction:
 
 class Snake:
 
-    SPEED = 5
+    SPEED = 1
 
     def __init__(self, screen, spritesheet):
         self.velocity = Position(self.SPEED, 0)
         self.up_bound = screen.size
         self.low_bound = Position(0, 0)
-        self.tail = [Position(2,2)]
+        self.tail = [
+            Config.START_POS,
+            Position(
+                Config.START_POS.x - Config.TILE_SIZE,
+                Config.START_POS.y
+            ),
+            Position(Config.START_POS.x - Config.TILE_SIZE * 2,
+                 Config.START_POS.y
+            ),
+            Position(Config.START_POS.x - Config.TILE_SIZE * 3,
+                 Config.START_POS.y
+            ),
+            Position(Config.START_POS.x - Config.TILE_SIZE * 4,
+                 Config.START_POS.y
+            ),
+            Position(Config.START_POS.x - Config.TILE_SIZE * 5,
+                 Config.START_POS.y
+            ),
+            Position(Config.START_POS.x - Config.TILE_SIZE * 6,
+                 Config.START_POS.y
+            ),
+            Position(Config.START_POS.x - Config.TILE_SIZE * 7,
+                 Config.START_POS.y
+            ),
+            Position(Config.START_POS.x - Config.TILE_SIZE * 8,
+                 Config.START_POS.y
+            ),
+        ]
         self.food_up = False
         self.load_sprites(spritesheet)
         self.direction = Direction.right
 
     def load_sprites(self, spritesheet):
-        block_size = Position(64, 64).get()
+        sprite_size = Position(64, 64).get()
         self.image = {}
 
         ### HEAD
         # Up
         head_up = Subimage(spritesheet, pygame.Rect(
-            ((3*64, 0*64), block_size))
+            ((3*64, 0*64), sprite_size))
         )
-        head_up.set_position(Position(50, 50))
         self.image['head_up'] = head_up
         # Right
         head_right = Subimage(spritesheet, pygame.Rect(
-            ((4*64, 0*64), block_size))
+            ((4*64, 0*64), sprite_size))
         )
-        head_right.set_position(Position(50, 50))
         self.image['head_right'] = head_right
         # Left
         head_left = Subimage(spritesheet, pygame.Rect(
-            ((3*64, 1*64), block_size))
+            ((3*64, 1*64), sprite_size))
         )
-        head_left.set_position(Position(50, 50))
         self.image['head_left'] = head_left
         # Down
         head_down = Subimage(spritesheet, pygame.Rect(
-            ((4*64, 1*64), block_size))
+            ((4*64, 1*64), sprite_size))
         )
-        head_down.set_position(Position(50, 50))
         self.image['head_down'] = head_down
 
         ### BODY
         # Down to right
         body_dr = Subimage(spritesheet, pygame.Rect(
-            ((0*64, 0*64), block_size))
+            ((0*64, 0*64), sprite_size))
         )
-        body_dr.set_position(Position(50, 50))
         self.image['body_dr'] = body_dr
         # Right 
         body_r = Subimage(spritesheet, pygame.Rect(
-            ((1*64, 0*64), block_size))
+            ((1*64, 0*64), sprite_size))
         )
-        body_r.set_position(Position(50, 50))
-        self.image['body_r'] = body_r
+        self.image['body_rl'] = body_r
         # Left to down
         body_ld = Subimage(spritesheet, pygame.Rect(
-            ((2*64, 0*64), block_size))
+            ((2*64, 0*64), sprite_size))
         )
-        body_ld.set_position(Position(50, 50))
         self.image['body_ld'] = body_ld
         # Up to right
         body_ur = Subimage(spritesheet, pygame.Rect(
-            ((0*64, 1*64), block_size))
+            ((0*64, 1*64), sprite_size))
         )
-        body_ur.set_position(Position(50, 50))
         self.image['body_ur'] = body_ur
         # Down
         body_down = Subimage(spritesheet, pygame.Rect(
-            ((2*64, 1*64), block_size))
+            ((2*64, 1*64), sprite_size))
         )
-        body_down.set_position(Position(50, 50))
-        self.image['body_down'] = body_down
+        self.image['body_ud'] = body_down
         # Up to left
         body_ul = Subimage(spritesheet, pygame.Rect(
-            ((2*64, 2*64), block_size))
+            ((2*64, 2*64), sprite_size))
         )
-        body_ul.set_position(Position(50, 50))
         self.image['body_ul'] = body_ul
 
+        ### TAIL
+        tail_up = Subimage(spritesheet, pygame.Rect(
+            ((3*64, 2*64), sprite_size))
+        )
+        self.image['tail_up'] = tail_up
 
+        tail_down = Subimage(spritesheet, pygame.Rect(
+            ((4*64, 3*64), sprite_size))
+        )
+        self.image['tail_down'] = tail_down
+
+        tail_right = Subimage(spritesheet, pygame.Rect(
+            ((4*64, 2*64), sprite_size))
+        )
+        self.image['tail_right'] = tail_right
+
+        tail_left = Subimage(spritesheet, pygame.Rect(
+            ((3*64, 3*64), sprite_size))
+        )
+        self.image['tail_left'] = tail_left
+
+        unk = Subimage(spritesheet, pygame.Rect(
+            ((1*64, 1*64), sprite_size))
+        )
+        self.image['unk'] = unk
     def move(self, direction):
         """
             1 = right, 2 = down, 3 = up, 4 = left, 5 = food
@@ -174,19 +251,66 @@ class Snake:
         if self.direction == 4:
             return self.image['head_left'].image
 
+    def get_tail_image(self, my_pos, parent_pos):
+        if my_pos.x > parent_pos.x:
+            # left
+            return self.image['tail_left'].image
+        if my_pos.x < parent_pos.x:
+            # right
+            return self.image['tail_right'].image
+        if my_pos.y > parent_pos.y:
+            # down
+            return self.image['tail_up'].image
+        if my_pos.y < parent_pos.y:
+            # up
+            return self.image['tail_down'].image
+
+    def get_body_image(self, pos, child, parent):
+        if pos.left_of(parent):
+            if pos.bottom_of(child):
+                return self.image['body_ur'].image
+            if pos.top_of(child):
+                return self.image['body_dr'].image
+            if pos.right_of(child):
+                # left
+                return self.image['body_rl'].image
+        if pos.right_of(parent):
+            if pos.bottom_of(child):
+                return self.image['body_ul'].image
+            if pos.top_of(child):
+                return self.image['body_ld'].image
+            else:
+                return self.image['body_rl'].image
+        if pos.bottom_of(parent):
+            if pos.right_of(child):
+                return self.image['body_ul'].image
+            if pos.left_of(child):
+                return self.image['body_ur'].image
+            else:
+                return self.image['body_ud'].image
+        if pos.top_of(parent):
+            if pos.right_of(child):
+                return self.image['body_ld'].image
+            if pos.left_of(child):
+                return self.image['body_dr'].image
+            else:
+                return self.image['body_ud'].image
+        return self.image['unk'].image
+
+
     def update_movement(self, pos):
         if self.velocity.x > 0:
-            if pos.x + self.velocity.x < self.up_bound.x - 1:
-                return Position(pos.x + self.velocity.x, pos.y)
+            if pos.x + self.velocity.x * Config.TILE_SIZE < self.up_bound.x - 1:
+                return Position(pos.x + self.velocity.x * Config.TILE_SIZE, pos.y)
         if self.velocity.x < 0:
-            if pos.x + self.velocity.x > self.low_bound.x:
-                return Position(pos.x + self.velocity.x, pos.y)
+            if pos.x + self.velocity.x * Config.TILE_SIZE > self.low_bound.x:
+                return Position(pos.x + self.velocity.x * Config.TILE_SIZE, pos.y)
         if self.velocity.y > 0:
-            if pos.y + self.velocity.y <= self.up_bound.y + 1:
-                return Position(pos.x, pos.y + self.velocity.y)
+            if pos.y + self.velocity.y * Config.TILE_SIZE <= self.up_bound.y + 1:
+                return Position(pos.x, pos.y + self.velocity.y * Config.TILE_SIZE)
         if self.velocity.y < 0:
-            if pos.y + self.velocity.y > self.low_bound.y:
-                return Position(pos.x, pos.y + self.velocity.y)
+            if pos.y + self.velocity.y * Config.TILE_SIZE > self.low_bound.y:
+                return Position(pos.x, pos.y + self.velocity.y * Config.TILE_SIZE)
         return pos
 
     def update(self, screen):
@@ -210,11 +334,27 @@ class Snake:
         # Check for tail collision
 
     def render(self, screen):
-        for each in self.tail:
-            screen.blit(
-                self.get_head_image(),
-                each.get()
-            )
+        for e in range(len(self.tail)-1, -1, -1):
+            if not e:
+                screen.blit(
+                    self.get_head_image(),
+                    self.tail[e].get()
+                )
+            elif e == len(self.tail)-1:
+                screen.blit(
+                    self.get_tail_image(self.tail[e], self.tail[e-1]),
+                    self.tail[e].get()
+                )
+
+            else:
+                screen.blit(
+                    self.get_body_image(
+                        self.tail[e],
+                        self.tail[e+1],
+                        self.tail[e-1]),
+                    self.tail[e].get()
+                )
+
 
 class Image:
     def __init__(self, image_file):
@@ -233,6 +373,7 @@ class Image:
 class Subimage:
     def __init__(self, image_obj, rect):
         self.image = image_obj.image.subsurface(rect)
+        self.image = pygame.transform.scale(self.image, Config.SCALE)
         self.position = Position(50, 50)
         self.visible = False
 
@@ -271,6 +412,7 @@ class Screen:
     def __init__(self, size):
         pygame.init()
         self.size = size
+        self.map_size = Position(size.x / Config.TILE_SIZE, size.y / Config.TILE_SIZE)
         self.screen = pygame.display.set_mode(size.get())
         self.running = True
         self.entities = {}
@@ -283,6 +425,7 @@ class Screen:
         self.processor = processor
 
     def run(self):
+        clock = pygame.time.Clock()
         while not self.quit:
             # Check input
             self.processor.process_input(self)
@@ -295,6 +438,7 @@ class Screen:
                     self.entities[k].render(self.screen)
             pygame.display.flip()
             self.screen.fill((0, 0, 0))
+            dt = clock.tick(Config.FPS)
 
 
 def run_graphical():
